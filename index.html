@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F&amp;G Visualizer — PERMANENCE</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@800&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<svg id="leaders" xmlns="http://www.w3.org/2000/svg">
+  <line id="ldr-spx" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <line id="ldr-fg"  stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+</svg>
+
+<div id="overlay">
+  <div id="mood-label-a" class="mood-label">READING THE MARKET…</div>
+  <div id="mood-label-b" class="mood-label"></div>
+  <div class="ann-box" id="ann-spx"><span id="spx-val">SPX — —</span></div>
+  <div class="ann-box" id="ann-fg">
+    <span id="fg-val">F&amp;G — —</span>
+    <span id="fg-hist" class="dim"></span>
+  </div>
+</div>
+
+<div id="timestamp"></div>
+<button id="chart-btn"   class="ctrl-btn active">[ chart ]</button>
+<button id="refresh-btn" class="ctrl-btn">[ refresh ]</button>
+<div id="tooltip"></div>
+
+<div id="tweaks-panel">
+  <h4>Tweaks</h4>
+  <div class="tw-row">
+    <label>State override</label>
+    <select id="tw-state">
+      <option value="auto">AUTO</option>
+      <option value="EXTREME_GREED">EXT. GREED</option>
+      <option value="GREED">GREED</option>
+      <option value="NEUTRAL">NEUTRAL</option>
+      <option value="FEAR">FEAR</option>
+      <option value="EXTREME_FEAR">EXT. FEAR</option>
+    </select>
+  </div>
+  <div class="tw-row">
+    <label>Node density</label>
+    <input type="range" id="tw-density" min="0.4" max="2" step="0.1" value="1">
+  </div>
+  <div class="tw-row">
+    <label>Drift speed</label>
+    <input type="range" id="tw-drift" min="0.2" max="3" step="0.1" value="1">
+  </div>
+  <div class="tw-row">
+    <label>Leader lines</label>
+    <input type="checkbox" id="tw-leaders" checked>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
