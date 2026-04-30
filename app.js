@@ -53,6 +53,8 @@ let histScores = [];
 let showChart  = true;
 
 let primNodes = [], secNodes = [];
+let lastSPXPrice = null;
+let spxPollTimer  = null;
 
 // ── NOISE ─────────────────────────────────────────────────────────────────────
 function sn(x,y,t){
@@ -511,6 +513,25 @@ function nyseIsOpen(){
 }
 
 async function fetchSPXDirect(){
+  // 0. Yahoo Finance direct — works from github.io and many hosted domains
+  try{
+    const ctrl = new AbortController();
+    setTimeout(()=>ctrl.abort(), 4000);
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1m&range=1d', {cache:'no-store', signal:ctrl.signal});
+    if(r.ok){
+      const j = await r.json();
+      const meta = j.chart.result[0].meta;
+      const isOpen = meta.marketState === 'REGULAR';
+      const price = isOpen ? meta.regularMarketPrice : (meta.regularMarketPreviousClose || meta.chartPreviousClose);
+      const prev  = meta.regularMarketPreviousClose || meta.chartPreviousClose;
+      if(price && prev){
+        const change = price - prev;
+        const changePct = (change/prev)*100;
+        return { price, change, changePct, direction:change>=0?'up':'down', isOpen };
+      }
+    }
+  }catch(e){}
+
   // 1. Financial Modeling Prep — provides isActivelyTrading + previousClose
   try{
     const ctrl = new AbortController();
@@ -593,6 +614,48 @@ async function fetchViaclaude(){
   return JSON.parse(raw.slice(start, end+1));
 }
 
+// ── SPX RENDER + LIVE POLLING ─────────────────────────────────────────────────
+function animatePrice(from, to, el, tag, dir, pct){
+  const dur = 600, t0 = performance.now();
+  (function step(now){
+    const p = Math.min((now-t0)/dur, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    const val = from + (to-from)*ease;
+    const fmt = Number(val).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    el.textContent = `${tag} ${fmt} ${dir} ${pct}%`;
+    if(p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+function renderSPX(spx, animate){
+  const el  = document.getElementById('spx-val');
+  const box = document.getElementById('ann-spx');
+  if(!el || !spx) return;
+  const dir  = spx.direction==='up'?'▲':'▼';
+  const pct  = Math.abs(spx.changePct).toFixed(2);
+  const tag  = spx.isOpen ? 'SPX' : 'SPX PREV';
+  const fmt  = Number(spx.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const changed = lastSPXPrice !== null && Math.abs(spx.price - lastSPXPrice) > 0.005;
+  if(animate && changed){
+    const col = spx.direction==='up' ? 'rgba(168,255,120,0.55)' : 'rgba(229,57,53,0.55)';
+    box.style.borderColor = col;
+    setTimeout(()=>{ box.style.borderColor = ''; }, 700);
+    animatePrice(lastSPXPrice, spx.price, el, tag, dir, pct);
+  } else {
+    el.textContent = `${tag} ${fmt} ${dir} ${pct}%`;
+  }
+  lastSPXPrice = spx.price;
+}
+
+async function pollSPX(){
+  if(spxPollTimer) clearTimeout(spxPollTimer);
+  if(!nyseIsOpen()){ spxPollTimer = null; return; }
+  spxPollTimer = setTimeout(async ()=>{
+    try{ const spx = await fetchSPXDirect(); if(spx) renderSPX(spx, true); }catch(e){}
+    pollSPX();
+  }, 30000);
+}
+
 async function fetchData(){
   setMoodLabel('READING THE MARKET…');
   document.getElementById('spx-val').textContent='SPX — —';
@@ -618,11 +681,8 @@ async function fetchData(){
   }
 
   if(spx){
-    const dir   = spx.direction==='up'?'▲':'▼';
-    const pct   = Math.abs(spx.changePct).toFixed(2);
-    const price = Number(spx.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    const tag   = spx.isOpen===false ? 'SPX PREV' : 'SPX';
-    document.getElementById('spx-val').textContent=`${tag} ${price} ${dir} ${pct}%`;
+    renderSPX(spx, false);
+    pollSPX();
   } else {
     document.getElementById('spx-val').textContent='SPX — (offline)';
   }

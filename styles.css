@@ -29,6 +29,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #080808; }
   padding: 6px 10px;
   pointer-events: none;
   min-width: 140px;
+  transition: border-color 0.3s ease;
 }
 .ann-box span {
   font-family: 'IBM Plex Mono', monospace;
