@@ -500,8 +500,37 @@ async function fetchFG(){
   return { score: Math.round(fg.score), label: fg.rating, hist };
 }
 
+function nyseIsOpen(){
+  const now = new Date();
+  const day = now.getUTCDay();
+  if(day === 0 || day === 6) return false; // weekend
+  const mins = now.getUTCHours() * 60 + now.getUTCMinutes();
+  // NYSE 9:30–16:00 ET. EDT=UTC-4 → 13:30–20:00 UTC; EST=UTC-5 → 14:30–21:00 UTC.
+  // Use 13:30–20:15 UTC to cover both offsets with a small buffer.
+  return mins >= 13 * 60 + 30 && mins < 20 * 60 + 15;
+}
+
 async function fetchSPXDirect(){
-  // 1. Stooq — CORS-friendly CSV
+  // 1. Financial Modeling Prep — provides isActivelyTrading + previousClose
+  try{
+    const ctrl = new AbortController();
+    setTimeout(()=>ctrl.abort(), 5000);
+    const r = await fetch('https://financialmodelingprep.com/api/v3/quote/%5EGSPC?apikey=demo', {cache:'no-store', signal:ctrl.signal});
+    if(r.ok){
+      const j = await r.json();
+      if(j && j[0]){
+        const q = j[0];
+        const isOpen = q.isActivelyTrading ?? nyseIsOpen();
+        const price  = q.price;           // last traded (live when open, close when closed)
+        const prev   = q.previousClose;
+        const change = price - prev;
+        const changePct = (change/prev)*100;
+        return { price, change, changePct, direction:change>=0?'up':'down', isOpen };
+      }
+    }
+  }catch(e){}
+
+  // 2. Stooq — CORS-friendly CSV, fall back to time-based open detection
   try{
     const ctrl = new AbortController();
     setTimeout(()=>ctrl.abort(), 5000);
@@ -514,31 +543,11 @@ async function fetchSPXDirect(){
         const close = parseFloat(cols[6]);
         const open  = parseFloat(cols[3]);
         if(!isNaN(close) && close > 0){
+          const isOpen = nyseIsOpen();
           const change = close - open;
           const changePct = (change/open)*100;
-          const now = new Date();
-          const h = now.getUTCHours();
-          const isOpen = h >= 13 && h < 20;
           return { price:close, change, changePct, direction:change>=0?'up':'down', isOpen };
         }
-      }
-    }
-  }catch(e){}
-
-  // 2. Financial Modeling Prep
-  try{
-    const ctrl = new AbortController();
-    setTimeout(()=>ctrl.abort(), 5000);
-    const r = await fetch('https://financialmodelingprep.com/api/v3/quote/%5EGSPC?apikey=demo', {cache:'no-store', signal:ctrl.signal});
-    if(r.ok){
-      const j = await r.json();
-      if(j && j[0]){
-        const q = j[0];
-        const isOpen = q.isActivelyTrading ?? false;
-        const price  = isOpen ? q.price : q.previousClose;
-        const change = price - q.previousClose;
-        const changePct = (change/q.previousClose)*100;
-        return { price, change, changePct, direction:change>=0?'up':'down', isOpen };
       }
     }
   }catch(e){}
