@@ -59,7 +59,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #080808; }
 .ctrl-btn.active { color: rgba(255,255,255,0.75); }
 #refresh-btn { bottom: 16px; right: 16px; }
 #chart-btn   { bottom: 16px; right: 88px; }
-#info-btn    { bottom: 16px; right: 164px; }
+#info-btn    { bottom: 16px; right: 160px; }
 
 #info-modal {
   display: none; position: fixed; inset: 0;

@@ -679,16 +679,12 @@ canvas.addEventListener('touchmove',e=>{ e.preventDefault(); mX=e.touches[0].cli
 canvas.addEventListener('touchend',()=>{ mX=-9999; mY=-9999; });
 
 // ── CHART TOGGLE ──────────────────────────────────────────────────────────────
-document.getElementById('info-btn').addEventListener('click',()=>{
-  document.getElementById('info-modal').classList.add('visible');
-});
-document.getElementById('info-close').addEventListener('click',()=>{
-  document.getElementById('info-modal').classList.remove('visible');
-});
-document.getElementById('info-modal').addEventListener('click',e=>{
-  if(e.target===document.getElementById('info-modal'))
-    document.getElementById('info-modal').classList.remove('visible');
-});
+const infoModal = document.getElementById('info-modal');
+function openInfo(){ infoModal.style.display='flex'; }
+function closeInfo(){ infoModal.style.display='none'; }
+document.getElementById('info-btn').addEventListener('click', openInfo);
+document.getElementById('info-close').addEventListener('click', closeInfo);
+infoModal.addEventListener('click',e=>{ if(e.target===infoModal) closeInfo(); });
 
 document.getElementById('chart-btn').addEventListener('click',()=>{
   showChart = !showChart;
